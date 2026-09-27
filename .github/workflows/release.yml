@@ -1,0 +1,70 @@
+name: Publish template archive
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - name: Select the declared framework version
+        id: framework
+        shell: bash
+        run: |
+          version="$(php -r '$m=json_decode(file_get_contents("phpaml.json"), true, 512, JSON_THROW_ON_ERROR); echo $m["runtime"]["framework"];')"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: MR-C0DE/phpaml-framework
+          ref: v${{ steps.framework.outputs.version }}
+          path: .framework-source
+
+      - name: Build reproducible archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          archive="phpaml-template-${version}.zip"
+          staging="$RUNNER_TEMP/phpaml-template-${version}"
+          mkdir -p "$staging"
+          git archive "$GITHUB_REF_NAME" | tar -x -C "$staging"
+          rm -rf "$staging/runtime/framework"
+          mkdir -p "$staging/runtime/framework"
+          cp -R .framework-source/src/. "$staging/runtime/framework/"
+          diff -qr .framework-source/src "$staging/runtime/framework"
+          (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/$archive" "phpaml-template-${version}")
+          sha256sum "$archive" > "$archive.sha256"
+          sha256sum --check "$archive.sha256"
+          unzip -t "$archive"
+
+      - name: Publish archive and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          archive="phpaml-template-${version}.zip"
+          prerelease=()
+          if [[ "$version" =~ (alpha|beta|rc) ]]; then prerelease=(--prerelease); fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$archive" "$archive.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$archive" "$archive.sha256" \
+              "${prerelease[@]}" --verify-tag --generate-notes --title "PHPAML Template ${version}"
+          fi

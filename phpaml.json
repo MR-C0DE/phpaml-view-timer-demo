@@ -1,0 +1,66 @@
+{
+    "name": "phpaml-view-timer-demo",
+    "version": "0.5.0-beta.7",
+    "description": "A reactive 60-second timer built with PHPAML View",
+    "application": {
+        "type": "view",
+        "views": "src/views",
+        "debug": false,
+        "session": {
+            "lifetime": 7200,
+            "same_site": "Lax"
+        },
+        "rate_limit": {
+            "enabled": true,
+            "limit": 60,
+            "window": 60
+        },
+        "middlewares": [
+            "PHPAML\\Middleware\\SecurityHeadersMiddleware"
+        ]
+    },
+    "database": {
+        "dsn": "sqlite:runtime/storage/database.sqlite",
+        "username": "root",
+        "password": ""
+    },
+    "seo": {
+        "site_name": "PHPAML",
+        "title": "PHPAML View Timer",
+        "description": "A reactive 60-second timer built entirely with PHPAML View.",
+        "base_url": "http://127.0.0.1:8910",
+        "locale": "en_CA",
+        "robots": "index,follow",
+        "image": "",
+        "twitter_card": "summary_large_image",
+        "type": "WebSite",
+        "author": "",
+        "theme_color": "#6d28d9",
+        "allow": [
+            "/"
+        ],
+        "disallow": []
+    },
+    "runtime": {
+        "directory": "runtime",
+        "framework": "0.3.0-beta.5"
+    },
+    "scripts": {
+        "start": "aml serve",
+        "test": "aml test"
+    },
+    "requirements": {
+        "php": "^8.2"
+    },
+    "modules": {
+        "view": {
+            "package": "phpaml/view",
+            "constraint": "^0.1.0-beta.6",
+            "mode": "frontend"
+        },
+        "engine": {
+            "package": "phpaml/engine",
+            "mode": "client"
+        }
+    }
+}
